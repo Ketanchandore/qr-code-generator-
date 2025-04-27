@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Generator</title>
+    <!-- Include qrcode.js library from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <style>
+        /* Basic Reset & Body Styling */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f0f2f5; /* Light background */
+            color: #333;
+            padding: 20px; /* Add padding for smaller screens */
+        }
+        /* Main Generator Box */
+        .qr-generator-box {
+            background-color: #ffffff;
+            padding: 30px 35px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 450px;
+            width: 100%; /* Responsive width */
+        }
+        /* Header */
+        .header { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 10px; }
+        .header-icon { display: grid; grid-template-columns: repeat(3, 6px); grid-template-rows: repeat(3, 6px); gap: 2px; }
+        .header-icon span { background-color: #5a4fcf; }
+        .header-icon span:nth-child(1), .header-icon span:nth-child(3), .header-icon span:nth-child(4), .header-icon span:nth-child(5), .header-icon span:nth-child(6), .header-icon span:nth-child(7), .header-icon span:nth-child(9) { background-color: #5a4fcf; }
+        .header-icon span:nth-child(2), .header-icon span:nth-child(8) { background-color: #fff; border: 1px solid #5a4fcf; }
+        h1 { font-size: 1.8em; color: #5a4fcf; font-weight: 600; margin: 0; } /* Heading color */
+        .subtitle { color: #666; margin-bottom: 25px; font-size: 0.95em; }
+        /* Tabs */
+        .tabs { display: flex; margin-bottom: 20px; background-color: #e9e7f8; border-radius: 8px; padding: 5px; }
+        .tab { flex: 1; padding: 10px 15px; border: none; background-color: transparent; cursor: pointer; border-radius: 6px; font-size: 0.9em; font-weight: 500; color: #5a4fcf; display: flex; align-items: center; justify-content: center; gap: 5px; transition: background-color 0.3s ease, color 0.3s ease; white-space: nowrap; }
+        .tab.active { background-color: #ffffff; color: #5a4fcf; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08); }
+        .tab svg { width: 16px; height: 16px; fill: currentColor; }
+        .tab .stroke { stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap:round; stroke-linejoin:round;}
+        /* Input Area */
+        .input-area { margin-bottom: 20px; text-align: left; }
+        label { display: block; font-weight: 500; margin-bottom: 8px; font-size: 0.9em; color: #333; }
+        .input-wrapper { position: relative; display: flex; }
+        /* Hide elements when not needed */
+        .hidden { display: none !important; }
+        #qrInput, #fileInputLabel { width: 100%; padding: 12px 15px; border: 1px solid #dcdcdc; border-radius: 8px; font-size: 1em; transition: border-color 0.3s ease, box-shadow 0.3s ease, background-color 0.2s ease; background-color: #fff; }
+        #qrInput:focus { outline: none; border-color: #a79ff0; box-shadow: 0 0 0 3px rgba(90, 79, 207, 0.15); }
+        /* Style the actual file input to be visually hidden but functional */
+        #fileInput { position: absolute; width: 0.1px; height: 0.1px; opacity: 0; overflow: hidden; z-index: -1; }
+        #fileInputLabel { display: inline-block; cursor: pointer; text-align: center; background-color: #f8f8f8; border-color: #dcdcdc; color: #555; }
+        #fileInputLabel:hover { background-color: #f0f0f0; border-color: #ccc; }
+        #fileNameDisplay { font-size: 0.85em; color: #666; margin-top: 8px; text-align: left; word-break: break-all; min-height: 1.2em; }
+        /* Generate Button */
+        #generateBtn { background-color: #7e73f0; color: #ffffff; border: none; padding: 14px 20px; border-radius: 8px; font-size: 1em; font-weight: 500; cursor: pointer; width: 100%; transition: background-color 0.3s ease, transform 0.1s ease; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 10px; }
+        #generateBtn:hover { background-color: #6a5fe0; }
+        #generateBtn:active { transform: scale(0.98); }
+        #generateBtn.disabled { background-color: #c1baf1; cursor: not-allowed; }
+        /* QR Code Display Area */
+        #qrcode { margin: 30px auto 20px auto; width: 200px; height: 200px; border: 1px solid #eee; border-radius: 8px; display: flex; justify-content: center; align-items: center; background-color: #f9f9f9; overflow: hidden; transition: border-color 0.3s ease; position: relative; }
+        #qrcode.has-code { border-color: #7e73f0; background-color: #fff; }
+        #qrcode img, #qrcode canvas { display: block; width: 100%; height: 100%; object-fit: contain; } /* Ensure content fits */
+        #qrcode .loading-indicator { font-size: 0.9em; color: #888; }
+        /* Download Link */
+        #downloadLink { display: none; /* Initially hidden */ background-color: #f0f2f5; color: #5a4fcf; border: 1px solid #dcdcdc; padding: 10px 20px; border-radius: 8px; font-size: 0.9em; font-weight: 500; cursor: pointer; text-decoration: none; transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease; margin-top: 15px; /* Space above download link */ }
+        #downloadLink:hover { background-color: #e9e7f8; border-color: #c1baf1; }
+        /* Footer Text */
+        .footer-text { margin-top: 30px; font-size: 0.85em; color: #888; }
+        /* Credit Text Styling */
+        .credit-text {
+            margin-top: 10px; /* Space between footer and credit */
+            font-size: 0.8em; /* Slightly smaller */
+            color: #5a4fcf; /* Same color as the heading */
+            font-weight: 500; /* Medium weight */
+        }
+    </style>
+</head>
+<body>
+
+    <div class="qr-generator-box">
+        <div class="header">
+             <div class="header-icon"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+            <h1>QR Code Generator</h1>
+        </div>
+        <p class="subtitle">Generate QR codes from URLs, text, or files</p>
+
+        <div class="tabs">
+            <!-- Tab buttons -->
+            <button class="tab active" id="tabUrl"> <!-- Start with URL active -->
+                <svg viewBox="0 0 24 24"><path d="M14 11.9999C14 10.8953 13.1046 9.99988 12 9.99988C10.8954 9.99988 10 10.8953 10 11.9999C10 13.1044 10.8954 13.9999 12 13.9999C13.1046 13.9999 14 13.1044 14 11.9999Z" fill="currentColor"/><path d="M10.4841 7.62988C10.1716 7.94239 10 8.3668 10 8.81988V9.04988C8.675 9.19988 7.5 10.4549 7.5 11.9999C7.5 13.5449 8.675 14.7999 10 14.9499V15.1799C10 15.6329 10.1716 16.0573 10.4841 16.3699L11.0161 16.9099C11.258 17.1492 11.6053 17.2849 11.9688 17.2849H12.0312C12.3947 17.2849 12.742 17.1492 12.9839 16.9099L13.5159 16.3699C13.8284 16.0573 14 15.6329 14 15.1799V14.9499C15.325 14.7999 16.5 13.5449 16.5 11.9999C16.5 10.4549 15.325 9.19988 14 9.04988V8.81988C14 8.3668 13.8284 7.94239 13.5159 7.62988L12.9839 7.08988C12.742 6.85061 12.3947 6.71488 12.0312 6.71488H11.9688C11.6053 6.71488 11.258 6.85061 11.0161 7.08988L10.4841 7.62988Z" fill="currentColor"/><path d="M7.63 10.4841L7.09 11.0161C6.85073 11.258 6.715 11.6053 6.715 11.9688V12.0312C6.715 12.3947 6.85073 12.742 7.09 12.9839L7.63 13.5159C7.94251 13.8284 8.36692 14 8.81992 14H9.04992C9.19992 15.325 10.4549 16.5 11.9999 16.5C13.5449 16.5 14.7999 15.325 14.9499 14H15.1799C15.6329 14 16.0573 13.8284 16.3699 13.5159L16.9099 12.9839C17.1491 12.742 17.2849 12.3947 17.2849 12.0312V11.9688C17.2849 11.6053 17.1491 11.258 16.9099 11.0161L16.3699 10.4841C16.0573 10.1716 15.6329 10 15.1799 10H14.9499C14.7999 8.675 13.5449 7.5 11.9999 7.5C10.4549 7.5 9.19992 8.675 9.04992 10H8.81992C8.36692 10 7.94251 10.1716 7.63 10.4841Z" fill="currentColor"/></svg>
+                URL
+            </button>
+            <button class="tab" id="tabText">
+                <svg viewBox="0 0 24 24"><path d="M4 6C4 4.89543 4.89543 4 6 4H18C19.1046 4 20 4.89543 20 6V18C20 19.1046 19.1046 20 18 20H6C4.89543 20 4 19.1046 4 18V6Z" class="stroke"/><path d="M8 9H16" class="stroke"/><path d="M8 12H16" class="stroke"/><path d="M8 15H12" class="stroke"/></svg>
+                Text
+            </button>
+             <button class="tab" id="tabFile">
+                 <svg viewBox="0 0 24 24"><path d="M9 11V5H15V11H9Z" fill="currentColor" opacity="0"/><path d="M9 11L12 14M15 11L12 14M12 14V19" class="stroke"/><path d="M4 15V9C4 7.89543 4.89543 7 6 7H18C19.1046 7 20 7.89543 20 9V15C20 16.1046 19.1046 17 18 17H6C4.89543 17 4 16.1046 4 15Z" class="stroke"/></svg>
+                File
+            </button>
+        </div>
+
+        <div class="input-area">
+            <!-- Text/URL Input -->
+            <div id="textUrlInputArea">
+                <label for="qrInput" id="inputLabel">Enter URL</label>
+                <div class="input-wrapper">
+                    <input type="url" id="qrInput" placeholder="Enter URL (e.g., https://example.com)"> <!-- Start with type=url -->
+                </div>
+            </div>
+            <!-- File Input (Initially Hidden) -->
+            <div id="fileInputArea" class="hidden">
+                <label for="fileInput" id="inputLabelFile">Select File</label>
+                <!-- Visually hidden file input -->
+                <input type="file" id="fileInput" aria-labelledby="fileInputLabel">
+                <!-- Label styled as a button to trigger file input -->
+                <label for="fileInput" id="fileInputLabel" role="button" tabindex="0">Choose File...</label>
+                <div id="fileNameDisplay">No file selected</div>
+            </div>
+        </div>
+
+        <button id="generateBtn">
+             <!-- Small QR icon inside button -->
+             <div class="header-icon" style="gap: 1px; transform: scale(0.6);">
+                 <span style="background-color: white;"></span><span style="background-color: white; border: 1px solid white;"></span><span style="background-color: white;"></span>
+                 <span style="background-color: white;"></span><span style="background-color: white;"></span><span style="background-color: white;"></span>
+                 <span style="background-color: white;"></span><span style="background-color: white; border: 1px solid white;"></span><span style="background-color: white;"></span>
+             </div>
+            Generate QR Code
+        </button>
+
+        <!-- Container where the QR code image will appear -->
+        <div id="qrcode">
+             <!-- QR Code will be generated here -->
+        </div>
+
+        <!-- The Download Link (initially hidden) -->
+        <a href="#" id="downloadLink">Download QR Code</a>
+
+        <p class="footer-text">Scan the QR code with any QR code reader app</p>
+
+        <!-- Credit Line Added Here -->
+        <p class="credit-text">App built by Ketan Chandore</p>
+
+    </div>
+
+    <script>
+        // Wait for the DOM to be fully loaded before running the script
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- Get References to HTML Elements ---
+            const qrInput = document.getElementById('qrInput');
+            const generateBtn = document.getElementById('generateBtn');
+            const qrcodeContainer = document.getElementById('qrcode');
+            const downloadLink = document.getElementById('downloadLink');
+            const inputLabel = document.getElementById('inputLabel');
+            const tabUrl = document.getElementById('tabUrl');
+            const tabText = document.getElementById('tabText');
+            const tabFile = document.getElementById('tabFile');
+            const textUrlInputArea = document.getElementById('textUrlInputArea');
+            const fileInputArea = document.getElementById('fileInputArea');
+            const fileInput = document.getElementById('fileInput');
+            const fileNameDisplay = document.getElementById('fileNameDisplay');
+
+            // --- State Variables ---
+            let currentQrCodeInstance = null; // Stores the qrcode.js object
+            let selectedFile = null;          // Stores the chosen file object
+            let currentMode = 'URL';          // Tracks the active tab ('URL', 'Text', 'File')
+
+            // --- Constants ---
+            const MAX_QR_DATA_LENGTH = 2953; // Approximate max characters for QR code
+            const BASE64_LENGTH_LIMIT = 2000; // Safer limit for embedding file data (especially images) via Base64
+
+            // --- Helper Functions ---
+
+            // Clears the QR code display area and hides the download link
+            function clearQRCode() {
+                qrcodeContainer.innerHTML = ''; // Remove canvas/img
+                qrcodeContainer.classList.remove('has-code'); // Remove highlight border
+                downloadLink.style.display = 'none'; // Hide download link
+                currentQrCodeInstance = null; // Clear the library instance
+                console.log("QR Code cleared.");
+            }
+
+            // Shows a loading message and disables the generate button
+            function showLoading() {
+                clearQRCode(); // Clear previous QR first
+                qrcodeContainer.innerHTML = '<div class="loading-indicator">Generating...</div>';
+                generateBtn.classList.add('disabled'); // Style as disabled
+                generateBtn.disabled = true; // Actually disable button
+                console.log("Showing loading indicator.");
+            }
+
+            // Hides the loading message and enables the generate button
+            function hideLoading() {
+                const loadingIndicator = qrcodeContainer.querySelector('.loading-indicator');
+                if (loadingIndicator) {
+                    qrcodeContainer.innerHTML = ''; // Remove loading text
+                }
+                generateBtn.classList.remove('disabled'); // Remove disabled style
+                generateBtn.disabled = false; // Re-enable button
+                console.log("Hiding loading indicator.");
+            }
+
+            // --- Prepare Download Link Function ---
+            // Creates the actual download link from the generated QR code canvas/image
+            function prepareDownloadLink() {
+                console.log("[Download] Attempting to prepare link...");
+                if (!currentQrCodeInstance) {
+                     console.error("[Download] Failed: No QR code instance available.");
+                     downloadLink.style.display = 'none';
+                     return;
+                }
+                if (!qrcodeContainer){
+                    console.error("[Download] Failed: QR Code container element not found.");
+                    downloadLink.style.display = 'none';
+                    return;
+                }
+
+                const canvas = qrcodeContainer.querySelector('canvas');
+                const img = qrcodeContainer.querySelector('img');
+                let dataUrl = null;
+
+                if (canvas) {
+                    console.log("[Download] Found <canvas> element.");
+                    try {
+                        dataUrl = canvas.toDataURL('image/png');
+                        console.log("[Download] Generated Data URL from canvas (length:", dataUrl.length, ")");
+                    } catch (e) {
+                        console.error("[Download] Error generating Data URL from canvas:", e);
+                        alert("Could not prepare download link from canvas.");
+                        downloadLink.style.display = 'none';
+                        return;
+                    }
+                } else if (img) {
+                    console.log("[Download] Found <img> element.");
+                    if (img.src && img.src.startsWith('data:image')) {
+                         dataUrl = img.src;
+                         console.log("[Download] Using existing Data URL from image src (length:", dataUrl.length, ")");
+                    } else if (img.src) {
+                         console.warn("[Download] Image src is not a Data URL. Attempting conversion via temporary canvas.");
+                         const tempCanvas = document.createElement('canvas');
+                         tempCanvas.width = img.naturalWidth > 0 ? img.naturalWidth : img.width > 0 ? img.width : 200;
+                         tempCanvas.height = img.naturalHeight > 0 ? img.naturalHeight : img.height > 0 ? img.height : 200;
+                         const ctx = tempCanvas.getContext('2d');
+                         try {
+                             ctx.drawImage(img, 0, 0, tempCanvas.width, tempCanvas.height);
+                             dataUrl = tempCanvas.toDataURL('image/png');
+                             console.log("[Download] Generated Data URL via temporary canvas (length:", dataUrl.length, ")");
+                         } catch (e) {
+                             console.error("[Download] Could not draw image to temporary canvas:", e);
+                             alert("Could not prepare download link from image element.");
+                             downloadLink.style.display = 'none';
+                             return;
+                         }
+                    } else {
+                        console.error("[Download] Image element found, but has no src attribute.");
+                         downloadLink.style.display = 'none';
+                         return;
+                    }
+                } else {
+                    console.error("[Download] Could not find <canvas> or <img> element inside #qrcode container.");
+                    downloadLink.style.display = 'none';
+                    return;
+                }
+
+                if (dataUrl) {
+                     downloadLink.href = dataUrl;
+                     downloadLink.download = 'qrcode.png';
+                     downloadLink.style.display = 'inline-block';
+                     console.log("[Download] Link successfully prepared and made visible.");
+                } else {
+                    console.error("[Download] Failed to obtain a Data URL for the download link.");
+                    downloadLink.style.display = 'none';
+                }
+            } // --- End of prepareDownloadLink ---
+
+
+            // --- Generate and Display QR Code Function ---
+            function displayQRCode(data) {
+                 hideLoading();
+                 clearQRCode();
+
+                 console.log(`Attempting to generate QR Code with data length: ${data.length}`);
+
+                 if (!qrcodeContainer) {
+                     console.error("QR Code container element not found!");
+                     alert("Internal error: QR code container missing.");
+                     return;
+                 }
+                 if (typeof QRCode === 'undefined') {
+                     console.error("QRCode library (qrcode.js) is not loaded!");
+                     alert("Error: QR Code library failed to load. Check internet connection or script tag.");
+                     return;
+                 }
+
+                 try {
+                     currentQrCodeInstance = new QRCode(qrcodeContainer, {
+                         text: data,
+                         width: 200,
+                         height: 200,
+                         colorDark: "#000000",
+                         colorLight: "#ffffff",
+                         correctLevel: QRCode.CorrectLevel.H
+                     });
+
+                     qrcodeContainer.classList.add('has-code');
+                     console.log("QR Code successfully generated by library.");
+
+                     setTimeout(prepareDownloadLink, 150);
+
+                 } catch (error) {
+                     console.error("Error during QR Code generation (QRCode library):", error);
+                     qrcodeContainer.innerHTML = 'Error generating QR Code';
+                     alert(`Failed to generate QR Code. Error: ${error.message}. Check console for details.`);
+                     downloadLink.style.display = 'none';
+                 }
+             } // --- End of displayQRCode ---
+
+            // --- Main Trigger Function (Called by Button Click or Enter Key) ---
+            function handleGenerateRequest() {
+                console.log(`Generate request received. Mode: ${currentMode}`);
+
+                if (currentMode === 'URL' || currentMode === 'Text') {
+                    const inputText = qrInput.value.trim();
+                    if (!inputText) {
+                        alert("Please enter text or a URL!");
+                        qrInput.focus(); return;
+                    }
+                    if (inputText.length > MAX_QR_DATA_LENGTH) {
+                        alert(`Input data is too long (${inputText.length} chars). Max approx ${MAX_QR_DATA_LENGTH}.`);
+                        return;
+                    }
+                    showLoading();
+                    setTimeout(() => displayQRCode(inputText), 10);
+
+                } else if (currentMode === 'File') {
+                    if (!selectedFile) {
+                        alert("Please select a file first!"); return;
+                    }
+                    showLoading();
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        console.log("File read successful.");
+                        const fileContent = e.target.result;
+                        let dataToEncode = '';
+                        let isTooLarge = false;
+                        if (selectedFile.type.startsWith('image/')) {
+                            dataToEncode = fileContent;
+                            if (dataToEncode.length > BASE64_LENGTH_LIMIT) {
+                                isTooLarge = true;
+                                alert(`Image file too large (${(dataToEncode.length / 1024).toFixed(1)} KB). Limit ~${(BASE64_LENGTH_LIMIT / 1024).toFixed(0)} KB.`);
+                            }
+                             console.log(`Read image file as Base64 (${dataToEncode.length} chars). Too large: ${isTooLarge}`);
+                        } else {
+                            dataToEncode = fileContent;
+                            if (dataToEncode.length > MAX_QR_DATA_LENGTH) {
+                                isTooLarge = true;
+                                alert(`File content too long (${dataToEncode.length} chars). Max approx ${MAX_QR_DATA_LENGTH}.`);
+                            }
+                            console.log(`Read non-image file as text (${dataToEncode.length} chars). Too large: ${isTooLarge}`);
+                        }
+
+                        if (isTooLarge) {
+                            hideLoading();
+                            clearQRCode();
+                        } else {
+                            setTimeout(() => displayQRCode(dataToEncode), 10);
+                        }
+                    };
+                    reader.onerror = function(e) {
+                        console.error("File reading error:", e);
+                        hideLoading();
+                        alert("Error reading the selected file.");
+                        clearQRCode();
+                    };
+                    if (selectedFile.type.startsWith('image/')) {
+                        console.log("Reading file as Data URL (Base64)...");
+                        reader.readAsDataURL(selectedFile);
+                    } else {
+                        console.log("Reading file as Text...");
+                        reader.readAsText(selectedFile);
+                    }
+                } else {
+                    console.error("Unknown mode:", currentMode);
+                    alert("An unexpected error occurred (unknown mode).");
+                }
+            } // --- End of handleGenerateRequest ---
+
+            // --- Tab Switching Logic ---
+            function setActiveTab(tabElement, mode) {
+                 console.log(`Switching to tab: ${mode}`);
+                 [tabUrl, tabText, tabFile].forEach(tab => tab?.classList.remove('active'));
+                 tabElement?.classList.add('active');
+                 currentMode = mode;
+                 clearQRCode();
+
+                 if (mode === 'File') {
+                     textUrlInputArea?.classList.add('hidden');
+                     fileInputArea?.classList.remove('hidden');
+                     selectedFile = null;
+                     if (fileInput) fileInput.value = '';
+                     if (fileNameDisplay) fileNameDisplay.textContent = 'No file selected';
+                     console.log("Switched to File input area.");
+                 } else {
+                     textUrlInputArea?.classList.remove('hidden');
+                     fileInputArea?.classList.add('hidden');
+                     const labelText = (mode === 'URL') ? 'Enter URL' : 'Enter Text';
+                     const placeholderText = (mode === 'URL') ? 'Enter URL (e.g., https://example.com)' : 'Enter any text';
+                     const inputType = (mode === 'URL') ? 'url' : 'text';
+
+                     if (inputLabel) inputLabel.textContent = labelText;
+                     if (qrInput) {
+                         qrInput.placeholder = placeholderText;
+                         qrInput.type = inputType;
+                         qrInput.focus();
+                     }
+                    console.log(`Switched to ${mode} input area.`);
+                 }
+             } // --- End of setActiveTab ---
+
+            // --- Attach Event Listeners ---
+            generateBtn?.addEventListener('click', handleGenerateRequest);
+            qrInput?.addEventListener('keypress', function(event) {
+                if (currentMode !== 'File' && event.key === 'Enter') {
+                    event.preventDefault();
+                    handleGenerateRequest();
+                }
+            });
+            fileInput?.addEventListener('change', (event) => {
+                 const file = event.target.files[0];
+                 if (file) {
+                     selectedFile = file;
+                     if (fileNameDisplay) fileNameDisplay.textContent = selectedFile.name;
+                     console.log(`File selected: ${selectedFile.name}, Type: ${selectedFile.type}, Size: ${selectedFile.size} bytes`);
+                     clearQRCode();
+                 } else {
+                     selectedFile = null;
+                     if (fileNameDisplay) fileNameDisplay.textContent = 'No file selected';
+                     console.log("File selection cleared.");
+                 }
+             });
+            tabUrl?.addEventListener('click', () => setActiveTab(tabUrl, 'URL'));
+            tabText?.addEventListener('click', () => setActiveTab(tabText, 'Text'));
+            tabFile?.addEventListener('click', () => setActiveTab(tabFile, 'File'));
+
+            // --- Initial Setup ---
+            setActiveTab(tabUrl, 'URL');
+            console.log("QR Generator script initialized and ready.");
+
+        }); // End of DOMContentLoaded listener
+    </script>
+
+</body>
+</html>
